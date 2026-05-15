@@ -174,6 +174,13 @@ class DataModelRunRequest(BaseModel):
     generate_dataset: bool = True
 
 
+class DataModelBatchRunRequest(BaseModel):
+    stock_code: str
+    data_model_ids: list[int]
+    start: str = "20240101"
+    generate_dataset: bool = True
+
+
 class AnalysisModelCreate(BaseModel):
     name: str = "趋势动量风控模型"
     version: str = "v1"

@@ -18,8 +18,8 @@ const nav = [
   {
     title: "数据模型",
     items: [
-      { key: "stocks", label: "行情与因子", icon: LineChart },
-      { key: "datasets", label: "训练样本", icon: Database },
+      { key: "datasets", label: "数据模型编制", icon: Database },
+      { key: "stocks", label: "数据源观察", icon: LineChart },
       { key: "dirty", label: "脏数据治理", icon: FileWarning }
     ]
   },

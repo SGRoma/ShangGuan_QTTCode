@@ -29,9 +29,13 @@ export function Stocks() {
 
   useEffect(() => {
     load().catch(() => sync());
+  }, []);
+
+  useEffect(() => {
+    if (code.length !== 6) return;
     const timer = window.setInterval(() => load(code).catch(() => undefined), 15000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [code]);
 
   const quote = monitor?.quote || {};
   const latest = monitor?.latest_signal || {};
@@ -41,11 +45,11 @@ export function Stocks() {
       <div className="page-heading">
         <div>
           <h1>股票实时监测</h1>
-          <p>同步日线行情并计算 MA、RSI、MACD、动量、波动率和成交量比率。页面定时更新数据，不重排布局。</p>
+          <p>这是底层数据源观察页，用来查看某只股票的行情、因子和实时刷新结果；真正的数据模型编制、测试和样本审核请在“数据模型编制”中完成。</p>
         </div>
         <div className="toolbar">
-          <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} maxLength={6} />
-          <button className="secondary" onClick={() => load(code)}>立即刷新</button>
+          <input placeholder="输入股票代码" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} maxLength={6} />
+          <button className="secondary" onClick={() => load(code)} disabled={code.length !== 6}>立即刷新</button>
           <button onClick={sync} disabled={syncing}>{syncing ? "同步中" : "同步行情与因子"}</button>
         </div>
       </div>
