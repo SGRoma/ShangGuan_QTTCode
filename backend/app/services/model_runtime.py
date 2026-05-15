@@ -87,8 +87,9 @@ def run_data_model(db: Session, stock_code: str, data_model: DataModelDefinition
     sync_summary = sync_daily_prices(db, stock_code, start=start)
     factor_summary = sync_factors(db, stock_code, data_model.feature_version)
     dataset = _get_or_create_dataset(db, data_model, stock_code) if generate_dataset else None
+    sample = None
     if dataset:
-        _create_data_model_sample(db, dataset, data_model, stock_code, factor_summary)
+        sample = _create_data_model_sample(db, dataset, data_model, stock_code, factor_summary)
     latest = daily_frame(db, stock_code).tail(1).to_dict(orient="records")
     return jsonable({
         "stock_code": _clean_code(stock_code),
@@ -97,6 +98,8 @@ def run_data_model(db: Session, stock_code: str, data_model: DataModelDefinition
         "sync": sync_summary,
         "factors": factor_summary,
         "dataset": model_to_dict(dataset) if dataset else None,
+        "sample": model_to_dict(sample) if sample else None,
+        "dataset_policy": "same stock + same data model reuses one dataset; same trade date snapshot is deduplicated",
         "latest_price": latest[0] if latest else None,
         "run_at": datetime.utcnow().isoformat(timespec="seconds"),
     })

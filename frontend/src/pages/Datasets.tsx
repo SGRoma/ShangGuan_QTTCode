@@ -113,6 +113,8 @@ export function Datasets() {
       });
       setRunResult(payload);
       await load();
+      const datasetId = payload.results?.[0]?.result?.dataset?.id;
+      if (datasetId) setSelected(await apiGet(`/datasets/${datasetId}`));
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "数据模型测试失败");
     } finally {
@@ -218,9 +220,11 @@ export function Datasets() {
       <div className="workbench model-workbench">
         <article className="panel command-panel">
           <h2>新增数据模型</h2>
-          <label><span>模型名称</span><input value={newModelName} onChange={(event) => setNewModelName(event.target.value)} /></label>
-          <label><span>因子版本</span><input value={newFeatureVersion} onChange={(event) => setNewFeatureVersion(event.target.value)} /></label>
-          <label><span>模型说明</span><textarea value={newDescription} onChange={(event) => setNewDescription(event.target.value)} /></label>
+          <div className="model-create-form">
+            <label><span>模型名称</span><input value={newModelName} onChange={(event) => setNewModelName(event.target.value)} /></label>
+            <label><span>因子版本</span><input value={newFeatureVersion} onChange={(event) => setNewFeatureVersion(event.target.value)} /></label>
+            <label><span>模型说明</span><textarea value={newDescription} onChange={(event) => setNewDescription(event.target.value)} /></label>
+          </div>
           <button className="icon-button" onClick={createDataModel} disabled={busy === "create" || !newModelName.trim()}>
             <Plus size={16} /> {busy === "create" ? "创建中" : "创建数据模型"}
           </button>
@@ -263,16 +267,18 @@ export function Datasets() {
           </div>
           <span className={busy === "run" ? "status-pill warning-pill" : "status-pill"}>{busy === "run" ? "执行中" : "等待执行"}</span>
         </div>
-        <div className="test-layout compact-test-layout">
-          <div className="test-input-card">
+        <div className="test-input-card">
+          <div className="test-fields">
             <label>
               <span>股票代码</span>
               <input placeholder="例如 600418" value={stockCode} onChange={(event) => setStockCode(event.target.value.replace(/\D/g, "").slice(0, 6))} />
             </label>
-            <div className="selected-model-summary">
-              <strong>已选模型</strong>
-              <span>{selectedModels.length ? selectedModels.map((model) => model.name).join(" / ") : "未选择"}</span>
-            </div>
+            <label className="selected-model-field">
+              <span>已选模型</span>
+              <div className="selected-model-summary">
+                {selectedModels.length ? selectedModels.map((model) => model.name).join(" / ") : "未选择"}
+              </div>
+            </label>
           </div>
           <button className="icon-button primary-action" onClick={runSelectedModels} disabled={busy === "run"}>
             <Play size={16} /> {busy === "run" ? "运行中" : "运行测试"}
@@ -282,8 +288,9 @@ export function Datasets() {
           <RunMetric label="股票" value={runResult?.stock_code || stockCode || "--"} />
           <RunMetric label="模型数量" value={String(runResult?.run_count ?? selectedModels.length)} />
           <RunMetric label="数据集" value={runResult?.results?.[0]?.result?.dataset?.dataset_name || "--"} />
-          <RunMetric label="样本生成" value={String(runResult?.results?.[0]?.result?.dataset?.sample_count ?? "--")} />
+          <RunMetric label="当前样本" value={String(runResult?.results?.[0]?.result?.dataset?.sample_count ?? "--")} />
         </div>
+        {runResult && <p className="panel-hint run-note">同一股票 + 同一数据模型复用一个数据集；同一交易日因子快照会去重，所以多次运行不会无限新增数据集或样本。</p>}
         {!runResult && <Empty title="尚未运行测试" text="输入股票代码、选择模型后点击运行测试；结果、图表和样本审核才会刷新。" />}
         <div className="result-grid">
           {(runResult?.results || []).map((item: AnyRecord) => (
@@ -305,7 +312,7 @@ export function Datasets() {
       <div className="workbench">
         <article className="panel">
           <h2>数据集版本</h2>
-          <p className="panel-hint">数据集由模型测试生成；它不是单独手工填写的表，而是某次股票 + 数据模型运行后的样本容器。</p>
+          <p className="panel-hint">数据集由模型测试生成。当前规则是同一股票 + 同一数据模型复用一个数据集，里面沉淀多次运行产生且未重复的样本。</p>
           <div className="card-list fixed-model-list">
             {datasets.length === 0 && <Empty title="暂无数据集版本" text="先运行一次模型测试，系统会生成数据集版本。" />}
             {datasets.map((dataset) => (
@@ -319,7 +326,7 @@ export function Datasets() {
 
         <article className="panel">
           <h2>样本审核</h2>
-          <p className="panel-hint">样本审核针对数据集。运行测试生成候选样本后，才能编辑、批准或设为负样本。</p>
+          <p className="panel-hint">当前数据集：{selected?.dataset_name || "未选择"}。左侧切换数据集后，这里显示对应样本。</p>
           <div className="card-list fixed-sample-list">
             {(!selected || !selected.samples?.length) && <Empty title="暂无可审核样本" text="选择包含样本的数据集，或先运行模型测试生成候选样本。" />}
             {(selected?.samples || []).map((sample: AnyRecord) => (
