@@ -263,14 +263,16 @@ export function Datasets() {
           </div>
           <span className={busy === "run" ? "status-pill warning-pill" : "status-pill"}>{busy === "run" ? "执行中" : "等待执行"}</span>
         </div>
-        <div className="test-layout">
-          <label>
-            <span>股票代码</span>
-            <input placeholder="例如 600418" value={stockCode} onChange={(event) => setStockCode(event.target.value.replace(/\D/g, "").slice(0, 6))} />
-          </label>
-          <div className="selected-model-summary">
-            <strong>已选模型</strong>
-            <span>{selectedModels.length ? selectedModels.map((model) => model.name).join(" / ") : "未选择"}</span>
+        <div className="test-layout compact-test-layout">
+          <div className="test-input-card">
+            <label>
+              <span>股票代码</span>
+              <input placeholder="例如 600418" value={stockCode} onChange={(event) => setStockCode(event.target.value.replace(/\D/g, "").slice(0, 6))} />
+            </label>
+            <div className="selected-model-summary">
+              <strong>已选模型</strong>
+              <span>{selectedModels.length ? selectedModels.map((model) => model.name).join(" / ") : "未选择"}</span>
+            </div>
           </div>
           <button className="icon-button primary-action" onClick={runSelectedModels} disabled={busy === "run"}>
             <Play size={16} /> {busy === "run" ? "运行中" : "运行测试"}

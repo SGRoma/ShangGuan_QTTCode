@@ -87,7 +87,10 @@ def sync_factors(db: Session, stock_code: str, feature_version: str = "feature_v
         )
     db.commit()
     latest = factors.iloc[-1]
-    return {"stock_code": clean, "feature_version": feature_version, "rows": len(factors), "latest_score": score_factors(latest)}
+    latest_score = score_factors(latest)
+    latest_score["trade_date"] = latest["trade_date"]
+    latest_score["close"] = round(float(latest.get("close") or 0), 4)
+    return {"stock_code": clean, "feature_version": feature_version, "rows": len(factors), "latest_score": latest_score}
 
 
 def daily_frame(db: Session, stock_code: str) -> pd.DataFrame:

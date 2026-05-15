@@ -794,6 +794,21 @@ label span {
   align-items: end;
 }
 
+.compact-test-layout {
+  grid-template-columns: minmax(0, 1fr) 150px;
+}
+
+.test-input-card {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
 .run-feedback {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -944,7 +959,7 @@ label span {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { position: relative; height: auto; }
   nav { grid-template-columns: repeat(3, 1fr); }
-  .metric-grid, .metric-grid.compact, .two-column, .workbench, .model-workbench, .card-grid, .operation-grid, .form-grid, .three-column, .wide-left, .module-grid, .agent-layout, .agent-page .metric-grid.compact, .agent-output-grid, .process-strip, .run-bar, .test-layout, .run-feedback, .result-grid, .sample-edit-grid, .modal-grid { grid-template-columns: 1fr; }
+  .metric-grid, .metric-grid.compact, .two-column, .workbench, .model-workbench, .card-grid, .operation-grid, .form-grid, .three-column, .wide-left, .module-grid, .agent-layout, .agent-page .metric-grid.compact, .agent-output-grid, .process-strip, .run-bar, .test-layout, .test-input-card, .run-feedback, .result-grid, .sample-edit-grid, .modal-grid { grid-template-columns: 1fr; }
   .model-row { grid-template-columns: 1fr; }
   .model-row-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inline-input { grid-template-columns: 1fr; }

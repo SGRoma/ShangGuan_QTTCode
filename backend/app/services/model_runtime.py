@@ -18,7 +18,7 @@ from ..models import (
     TrainingSample,
 )
 from ..quant.backtest import BacktestParams, run_factor_backtest
-from ..serializers import model_to_dict
+from ..serializers import jsonable, model_to_dict
 from ..services.market_data import daily_frame, fetch_realtime_quote, sync_daily_prices, sync_factors
 
 
@@ -87,8 +87,10 @@ def run_data_model(db: Session, stock_code: str, data_model: DataModelDefinition
     sync_summary = sync_daily_prices(db, stock_code, start=start)
     factor_summary = sync_factors(db, stock_code, data_model.feature_version)
     dataset = _get_or_create_dataset(db, data_model, stock_code) if generate_dataset else None
+    if dataset:
+        _create_data_model_sample(db, dataset, data_model, stock_code, factor_summary)
     latest = daily_frame(db, stock_code).tail(1).to_dict(orient="records")
-    return {
+    return jsonable({
         "stock_code": _clean_code(stock_code),
         "data_model_id": data_model.id,
         "data_model_name": data_model.name,
@@ -97,7 +99,62 @@ def run_data_model(db: Session, stock_code: str, data_model: DataModelDefinition
         "dataset": model_to_dict(dataset) if dataset else None,
         "latest_price": latest[0] if latest else None,
         "run_at": datetime.utcnow().isoformat(timespec="seconds"),
-    }
+    })
+
+
+def _create_data_model_sample(
+    db: Session,
+    dataset: DatasetVersion,
+    data_model: DataModelDefinition,
+    stock_code: str,
+    factor_summary: dict[str, Any],
+) -> TrainingSample | None:
+    latest = factor_summary.get("latest_score") or {}
+    trade_date = latest.get("trade_date")
+    exists = db.scalar(
+        select(TrainingSample).where(
+            TrainingSample.dataset_version_id == dataset.id,
+            TrainingSample.stock_code == _clean_code(stock_code),
+            TrainingSample.trade_date == trade_date,
+            TrainingSample.source_type == "data_model_run",
+            TrainingSample.source_id == data_model.id,
+        )
+    )
+    if exists:
+        return exists
+    sample = TrainingSample(
+        dataset_version_id=dataset.id,
+        sample_type="data_model_factor_snapshot",
+        stock_code=_clean_code(stock_code),
+        trade_date=trade_date,
+        features_json=jsonable(
+            {
+                "data_model_id": data_model.id,
+                "feature_version": data_model.feature_version,
+                "score": latest.get("score"),
+                "risk_level": latest.get("risk_level"),
+                "signal": latest.get("signal"),
+                "valuation_score": latest.get("valuation_score"),
+                "quality_score": latest.get("quality_score"),
+                "trend_score": latest.get("trend_score"),
+                "momentum_score": latest.get("momentum_score"),
+                "volume_score": latest.get("volume_score"),
+                "risk_penalty": latest.get("risk_penalty"),
+                "guard": "trade_date_or_before",
+            }
+        ),
+        label_json=jsonable({"label": "pending_human_review", "source": "data_model_run"}),
+        source_type="data_model_run",
+        source_id=data_model.id,
+        quality_score=float(latest.get("score") or 70),
+        status="candidate",
+        can_train=False,
+    )
+    db.add(sample)
+    dataset.sample_count += 1
+    db.commit()
+    db.refresh(sample)
+    return sample
 
 
 def run_control_pipeline(db: Session, payload: Any) -> dict[str, Any]:

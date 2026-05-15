@@ -30,7 +30,14 @@ export async function apiDelete<T>(path: string): Promise<T> {
 
 async function handle<T>(response: Response): Promise<T> {
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
+  let payload: any = {};
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = { detail: text };
+    }
+  }
   if (!response.ok) {
     throw new Error(payload.detail || payload.error || `HTTP ${response.status}`);
   }
