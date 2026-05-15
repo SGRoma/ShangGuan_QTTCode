@@ -385,6 +385,11 @@ pre {
   font-weight: 800;
 }
 
+.warning-pill {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
 .console-page {
   gap: 14px;
 }
@@ -676,6 +681,69 @@ label span {
   padding-right: 2px;
 }
 
+.panel-hint {
+  margin: -4px 0 12px;
+}
+
+.model-workbench {
+  grid-template-columns: minmax(420px, .9fr) minmax(520px, 1.1fr);
+}
+
+.model-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.model-row.active {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.model-check {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.model-check input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin-top: 2px;
+}
+
+.model-check span {
+  display: grid;
+  gap: 5px;
+}
+
+.model-check small,
+.model-check em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.model-row-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 82px;
+}
+
+.model-row-actions button {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
 .model-check-card {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
@@ -717,6 +785,20 @@ label span {
   grid-template-columns: 180px minmax(0, 1fr) 140px;
   gap: 12px;
   align-items: end;
+}
+
+.test-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 150px;
+  gap: 12px;
+  align-items: end;
+}
+
+.run-feedback {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .selected-model-summary {
@@ -775,6 +857,56 @@ label span {
   font-size: 12px;
 }
 
+.empty-state {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: #fbfcfe;
+  color: var(--muted);
+}
+
+.empty-state strong {
+  color: var(--text);
+}
+
+.empty-state span {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, .42);
+}
+
+.modal-panel {
+  width: min(900px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.modal-grid .full {
+  grid-column: 1 / -1;
+}
+
+.modal-grid textarea {
+  min-height: 150px;
+}
+
 .learning-box {
   display: grid;
   grid-template-columns: 28px 1fr;
@@ -812,7 +944,9 @@ label span {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { position: relative; height: auto; }
   nav { grid-template-columns: repeat(3, 1fr); }
-  .metric-grid, .metric-grid.compact, .two-column, .workbench, .card-grid, .operation-grid, .form-grid, .three-column, .wide-left, .module-grid, .agent-layout, .agent-page .metric-grid.compact, .agent-output-grid, .process-strip, .run-bar, .result-grid, .sample-edit-grid { grid-template-columns: 1fr; }
+  .metric-grid, .metric-grid.compact, .two-column, .workbench, .model-workbench, .card-grid, .operation-grid, .form-grid, .three-column, .wide-left, .module-grid, .agent-layout, .agent-page .metric-grid.compact, .agent-output-grid, .process-strip, .run-bar, .test-layout, .run-feedback, .result-grid, .sample-edit-grid, .modal-grid { grid-template-columns: 1fr; }
+  .model-row { grid-template-columns: 1fr; }
+  .model-row-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inline-input { grid-template-columns: 1fr; }
   .monitor-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

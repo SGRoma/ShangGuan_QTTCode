@@ -20,7 +20,11 @@ router = APIRouter(prefix="/data-models", tags=["data-models"])
 @router.get("")
 def list_data_models(db: Session = Depends(get_db)):
     ensure_default_models(db)
-    rows = db.scalars(select(DataModelDefinition).order_by(DataModelDefinition.created_at.desc())).all()
+    rows = db.scalars(
+        select(DataModelDefinition)
+        .where(DataModelDefinition.status != "archived")
+        .order_by(DataModelDefinition.created_at.desc())
+    ).all()
     return {"rows": [model_to_dict(row) for row in rows]}
 
 
@@ -42,6 +46,18 @@ def update_data_model(model_id: int, payload: DataModelUpdate, db: Session = Dep
     for field in ("name", "description", "feature_version", "pipeline_config_json", "schedule_config_json", "status"):
         if field in changes:
             setattr(row, field, changes[field])
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return model_to_dict(row)
+
+
+@router.delete("/{model_id}")
+def archive_data_model(model_id: int, db: Session = Depends(get_db)):
+    row = db.get(DataModelDefinition, model_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Data model not found.")
+    row.status = "archived"
     row.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(row)

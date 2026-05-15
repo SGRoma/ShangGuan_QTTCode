@@ -138,7 +138,14 @@ def operation_state(db: Session = Depends(get_db)):
         "models": [model_to_dict(row) for row in models],
         "agent_logs": [model_to_dict(row) for row in logs],
         "dirty_records": [model_to_dict(row) for row in dirty],
-        "data_models": [model_to_dict(row) for row in db.scalars(select(DataModelDefinition).order_by(DataModelDefinition.created_at.desc())).all()],
+        "data_models": [
+            model_to_dict(row)
+            for row in db.scalars(
+                select(DataModelDefinition)
+                .where(DataModelDefinition.status != "archived")
+                .order_by(DataModelDefinition.created_at.desc())
+            ).all()
+        ],
         "analysis_models": [model_to_dict(row) for row in db.scalars(select(AnalysisModelDefinition).order_by(AnalysisModelDefinition.created_at.desc())).all()],
         "summary": {
             "stocks": db.scalar(select(func.count()).select_from(StockBasic)) or 0,
