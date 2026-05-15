@@ -1,4 +1,4 @@
-import { Bot, Edit3, FlaskConical, GitBranch, Play } from "lucide-react";
+import { Archive, Bot, Edit3, FlaskConical, GitBranch, Play, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { apiGet, apiPatch, apiPost } from "../api/client";
 import type { AnyRecord, OperationState, WorkflowPayload } from "../types/domain";
@@ -11,13 +11,14 @@ export function Strategies() {
   const [title, setTitle] = useState("600418 趋势动量候选策略");
   const [idea, setIdea] = useState("基于趋势、动量、成交量和风险惩罚，生成一个只用于回测和模拟盘观察的候选策略。");
   const [result, setResult] = useState<WorkflowPayload | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
 
   async function load() {
     const [operation, ideaPayload] = await Promise.all([
       apiGet<OperationState>("/workflows/operation-state"),
-      apiGet<{ rows: AnyRecord[] }>("/strategies/ideas")
+      apiGet<{ rows: AnyRecord[] }>(`/strategies/ideas${showArchived ? "?include_archived=true" : ""}`)
     ]);
     setState(operation);
     setIdeas(ideaPayload.rows);
@@ -84,7 +85,32 @@ export function Strategies() {
     }
   }
 
-  useEffect(() => { load().catch((exc) => setError(exc instanceof Error ? exc.message : "加载失败")); }, []);
+  async function archiveIdea(id: number) {
+    setError("");
+    try {
+      await apiPost(`/strategies/ideas/${id}/archive`);
+      if (selectedIdeaId === id) {
+        setSelectedIdeaId(null);
+        setTitle("");
+        setIdea("");
+      }
+      await load();
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "归档失败");
+    }
+  }
+
+  async function restoreIdea(id: number) {
+    setError("");
+    try {
+      await apiPost(`/strategies/ideas/${id}/restore`);
+      await load();
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "恢复失败");
+    }
+  }
+
+  useEffect(() => { load().catch((exc) => setError(exc instanceof Error ? exc.message : "加载失败")); }, [showArchived]);
 
   const selectedIdea = useMemo(() => ideas.find((item) => item.id === selectedIdeaId), [ideas, selectedIdeaId]);
 
@@ -121,8 +147,14 @@ export function Strategies() {
           {selectedIdea && <p className="data-status">当前想法 #{selectedIdea.id}：{selectedIdea.status} · 可训练={String(selectedIdea.can_train)}</p>}
         </article>
 
-        <article className="panel">
-          <h2>候选想法列表</h2>
+        <article className="panel fixed-list-panel">
+          <div className="panel-title-row">
+            <h2>候选想法列表</h2>
+            <label className="toggle-row inline-toggle">
+              <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />
+              <span>显示归档</span>
+            </label>
+          </div>
           <div className="card-list">
             {ideas.map((row) => (
               <button className={`list-button ${row.id === selectedIdeaId ? "active" : ""}`} key={row.id} onClick={() => selectIdea(row)}>
@@ -153,6 +185,11 @@ export function Strategies() {
                       <button onClick={() => review(row.id, "approved")}>批准</button>
                       <button className="secondary" onClick={() => review(row.id, "negative_sample")}>负样本</button>
                       <button className="danger" onClick={() => review(row.id, "rejected")}>拒绝</button>
+                      {row.status === "archived" ? (
+                        <button className="secondary" onClick={() => restoreIdea(row.id)}><RotateCcw size={12} /> 恢复</button>
+                      ) : (
+                        <button className="secondary" onClick={() => archiveIdea(row.id)}><Archive size={12} /> 归档</button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -176,9 +213,9 @@ export function Strategies() {
             ))}
           </div>
         </article>
-        <article className="panel">
+        <article className="panel fixed-output-panel">
           <h2><Bot size={16} /> 本次实验输出</h2>
-          <pre>{JSON.stringify(result?.strategy_version || result?.agent_review || {}, null, 2)}</pre>
+          <pre className="fixed-pre">{JSON.stringify(result?.strategy_version || result?.agent_review || {}, null, 2)}</pre>
         </article>
       </div>
     </section>

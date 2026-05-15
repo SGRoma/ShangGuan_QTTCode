@@ -71,6 +71,14 @@ class AgentRequest(BaseModel):
     context: dict[str, Any] = Field(default_factory=dict)
 
 
+class AgentConfigUpdate(BaseModel):
+    enabled: bool | None = None
+    auto_run: bool | None = None
+    schedule: str | None = None
+    timeout_seconds: int | None = None
+    notes: str | None = None
+
+
 class DatasetCreate(BaseModel):
     dataset_name: str
     version: str = "v1"

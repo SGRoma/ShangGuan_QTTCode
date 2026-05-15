@@ -22,8 +22,11 @@ def create_idea(payload: StrategyIdeaCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/ideas")
-def list_ideas(db: Session = Depends(get_db)):
-    rows = db.scalars(select(StrategyIdea).order_by(StrategyIdea.created_at.desc())).all()
+def list_ideas(include_archived: bool = False, db: Session = Depends(get_db)):
+    stmt = select(StrategyIdea)
+    if not include_archived:
+        stmt = stmt.where(StrategyIdea.status != "archived")
+    rows = db.scalars(stmt.order_by(StrategyIdea.created_at.desc())).all()
     return {"rows": [model_to_dict(row) for row in rows]}
 
 
@@ -48,6 +51,36 @@ def review_idea(idea_id: int, payload: StrategyReviewRequest, db: Session = Depe
     row.can_trade = payload.can_trade and payload.status == "approved"
     row.risk_level = payload.risk_level
     row.remark = payload.remark
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return model_to_dict(row)
+
+
+@router.post("/ideas/{idea_id}/archive")
+def archive_idea(idea_id: int, db: Session = Depends(get_db)):
+    row = db.get(StrategyIdea, idea_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Strategy idea not found.")
+    row.status = "archived"
+    row.review_status = "reviewed"
+    row.can_train = False
+    row.can_trade = False
+    row.remark = "已归档。为保证策略版本、回测和训练样本可追溯，不执行物理删除。"
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return model_to_dict(row)
+
+
+@router.post("/ideas/{idea_id}/restore")
+def restore_idea(idea_id: int, db: Session = Depends(get_db)):
+    row = db.get(StrategyIdea, idea_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Strategy idea not found.")
+    row.status = "candidate"
+    row.review_status = "pending"
+    row.remark = "已从归档恢复为候选想法。"
     row.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(row)
