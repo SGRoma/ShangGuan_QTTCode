@@ -1,7 +1,8 @@
-import { CheckCircle2, Database, FlaskConical, Layers3, Play, Plus } from "lucide-react";
+import { CheckCircle2, Database, Edit3, FlaskConical, Layers3, Play, Plus, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { apiGet, apiPost } from "../api/client";
-import type { AnyRecord, OperationState } from "../types/domain";
+import { apiGet, apiPatch, apiPost } from "../api/client";
+import { LineChart } from "../charts/LineChart";
+import type { AnyRecord, OperationState, SeriesPoint } from "../types/domain";
 
 export function Datasets() {
   const [state, setState] = useState<OperationState | null>(null);
@@ -9,9 +10,18 @@ export function Datasets() {
   const [stockCode, setStockCode] = useState("");
   const [selectedModelIds, setSelectedModelIds] = useState<number[]>([]);
   const [runResult, setRunResult] = useState<AnyRecord | null>(null);
+  const [editingModelId, setEditingModelId] = useState<number | null>(null);
+  const [editingSampleId, setEditingSampleId] = useState<number | null>(null);
   const [newModelName, setNewModelName] = useState("自定义A股日线数据模型");
   const [newFeatureVersion, setNewFeatureVersion] = useState("feature_v1");
   const [newDescription, setNewDescription] = useState("定义行情同步、因子计算、样本生成和防未来函数约束。");
+  const [modelConfigText, setModelConfigText] = useState("");
+  const [sampleFeatureText, setSampleFeatureText] = useState("");
+  const [sampleLabelText, setSampleLabelText] = useState("");
+  const [sampleQuality, setSampleQuality] = useState("80");
+  const [sampleWeight, setSampleWeight] = useState("1");
+  const [sampleStatus, setSampleStatus] = useState("candidate");
+  const [sampleCanTrain, setSampleCanTrain] = useState(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -52,6 +62,26 @@ export function Datasets() {
     }
   }
 
+  async function saveDataModel() {
+    if (!editingModelId) return;
+    setBusy("save-model");
+    setError("");
+    try {
+      const pipeline = modelConfigText.trim() ? JSON.parse(modelConfigText) : undefined;
+      await apiPatch(`/data-models/${editingModelId}`, {
+        name: newModelName,
+        description: newDescription,
+        feature_version: newFeatureVersion,
+        pipeline_config_json: pipeline
+      });
+      await load();
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "保存数据模型失败，请检查 JSON。");
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function runSelectedModels() {
     setBusy("run");
     setError("");
@@ -85,6 +115,27 @@ export function Datasets() {
     await load();
   }
 
+  async function saveSample() {
+    if (!selected || !editingSampleId) return;
+    setBusy("save-sample");
+    setError("");
+    try {
+      await apiPatch(`/datasets/${selected.id}/samples/${editingSampleId}`, {
+        features_json: JSON.parse(sampleFeatureText || "{}"),
+        label_json: JSON.parse(sampleLabelText || "{}"),
+        quality_score: Number(sampleQuality),
+        sample_weight: Number(sampleWeight),
+        status: sampleStatus,
+        can_train: sampleCanTrain
+      });
+      await load();
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "保存样本失败，请检查 JSON。");
+    } finally {
+      setBusy("");
+    }
+  }
+
   useEffect(() => { load().catch((exc) => setError(exc instanceof Error ? exc.message : "加载失败")); }, []);
 
   const dataModels = state?.data_models || [];
@@ -94,6 +145,28 @@ export function Datasets() {
   function toggleModel(id: number) {
     setSelectedModelIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   }
+
+  function editModel(model: AnyRecord) {
+    setEditingModelId(Number(model.id));
+    setNewModelName(model.name || "");
+    setNewFeatureVersion(model.feature_version || "feature_v1");
+    setNewDescription(model.description || "");
+    setModelConfigText(JSON.stringify(model.pipeline_config_json || {}, null, 2));
+  }
+
+  function editSample(sample: AnyRecord) {
+    setEditingSampleId(Number(sample.id));
+    setSampleFeatureText(JSON.stringify(sample.features_json || {}, null, 2));
+    setSampleLabelText(JSON.stringify(sample.label_json || {}, null, 2));
+    setSampleQuality(String(sample.quality_score ?? 80));
+    setSampleWeight(String(sample.sample_weight ?? 1));
+    setSampleStatus(sample.status || "candidate");
+    setSampleCanTrain(Boolean(sample.can_train));
+  }
+
+  const chartRows = ((runResult?.results?.[0]?.result?.preview_series || runResult?.results?.[0]?.result?.series || []) as AnyRecord[])
+    .filter((row) => row.trade_date)
+    .map((row) => ({ ...row, trade_date: String(row.trade_date) })) as SeriesPoint[];
 
   return (
     <section className="page data-model-page">
@@ -115,11 +188,19 @@ export function Datasets() {
       <div className="workbench">
         <article className="panel command-panel">
           <span className="section-label">模型编制</span>
-          <h2>新增数据模型</h2>
+          <h2>{editingModelId ? "编辑数据模型" : "新增数据模型"}</h2>
           <label><span>模型名称</span><input value={newModelName} onChange={(event) => setNewModelName(event.target.value)} /></label>
           <label><span>因子版本</span><input value={newFeatureVersion} onChange={(event) => setNewFeatureVersion(event.target.value)} /></label>
           <label><span>模型说明</span><textarea value={newDescription} onChange={(event) => setNewDescription(event.target.value)} /></label>
-          <button className="icon-button" onClick={createDataModel} disabled={busy === "create" || !newModelName.trim()}><Plus size={16} /> {busy === "create" ? "创建中" : "创建数据模型"}</button>
+          {editingModelId && <label><span>处理配置 JSON</span><textarea value={modelConfigText} onChange={(event) => setModelConfigText(event.target.value)} /></label>}
+          <div className="button-row">
+            <button className="secondary icon-button" onClick={() => { setEditingModelId(null); setNewModelName("自定义A股日线数据模型"); setNewFeatureVersion("feature_v1"); setNewDescription("定义行情同步、因子计算、样本生成和防未来函数约束。"); setModelConfigText(""); }}><Plus size={16} /> 新建</button>
+            {editingModelId ? (
+              <button className="icon-button" onClick={saveDataModel} disabled={busy === "save-model"}><Save size={16} /> {busy === "save-model" ? "保存中" : "保存模型"}</button>
+            ) : (
+              <button className="icon-button" onClick={createDataModel} disabled={busy === "create" || !newModelName.trim()}><Plus size={16} /> {busy === "create" ? "创建中" : "创建数据模型"}</button>
+            )}
+          </div>
         </article>
 
         <article className="panel">
@@ -132,6 +213,7 @@ export function Datasets() {
                   <strong>{model.name} · {model.version}</strong>
                   <small>{model.status} · feature={model.feature_version} · last_run={formatTime(model.last_run_at)}</small>
                   <em>{model.description}</em>
+                  <button type="button" className="secondary icon-button mini-action" onClick={(event) => { event.preventDefault(); editModel(model); }}><Edit3 size={13} /> 编辑</button>
                 </span>
               </label>
             ))}
@@ -164,6 +246,12 @@ export function Datasets() {
             </article>
           ))}
         </div>
+        {chartRows.length > 0 && (
+          <div className="two-column data-result-visual">
+            <article className="panel inner-panel"><h2>运行后价格观察</h2><LineChart rows={chartRows} mode="price" /></article>
+            <article className="panel inner-panel"><h2>运行后因子得分</h2><LineChart rows={chartRows} mode="score" /></article>
+          </div>
+        )}
       </article>
 
       <div className="workbench">
@@ -188,6 +276,7 @@ export function Datasets() {
                 <span>{sample.status} · can_train={String(sample.can_train)} · stock={sample.stock_code || "--"} · source={sample.source_type}#{sample.source_id}</span>
                 <pre>{JSON.stringify({ features: sample.features_json, label: sample.label_json }, null, 2)}</pre>
                 <div>
+                  <button className="secondary" onClick={() => editSample(sample)}>编辑样本</button>
                   <button onClick={() => approve(sample.id)}>批准训练</button>
                   <button className="secondary" onClick={() => exclude(sample.id)}>设为负样本</button>
                 </div>
@@ -196,6 +285,24 @@ export function Datasets() {
           </div>
         </article>
       </div>
+
+      {editingSampleId && (
+        <article className="panel">
+          <div className="panel-title-row">
+            <h2>编辑样本 #{editingSampleId}</h2>
+            <button className="secondary" onClick={() => setEditingSampleId(null)}>关闭</button>
+          </div>
+          <div className="sample-edit-grid">
+            <label><span>特征 JSON</span><textarea value={sampleFeatureText} onChange={(event) => setSampleFeatureText(event.target.value)} /></label>
+            <label><span>标签 JSON</span><textarea value={sampleLabelText} onChange={(event) => setSampleLabelText(event.target.value)} /></label>
+            <label><span>质量分</span><input type="number" value={sampleQuality} onChange={(event) => setSampleQuality(event.target.value)} /></label>
+            <label><span>样本权重</span><input type="number" step="0.1" value={sampleWeight} onChange={(event) => setSampleWeight(event.target.value)} /></label>
+            <label><span>状态</span><select value={sampleStatus} onChange={(event) => setSampleStatus(event.target.value)}><option value="candidate">candidate</option><option value="approved">approved</option><option value="rejected">rejected</option><option value="negative_sample">negative_sample</option><option value="invalid">invalid</option><option value="deprecated">deprecated</option></select></label>
+            <label className="toggle-row"><input type="checkbox" checked={sampleCanTrain} onChange={(event) => setSampleCanTrain(event.target.checked)} /><span>允许训练</span></label>
+          </div>
+          <button className="icon-button" onClick={saveSample} disabled={busy === "save-sample"}><Save size={16} /> {busy === "save-sample" ? "保存中" : "保存样本"}</button>
+        </article>
+      )}
     </section>
   );
 }

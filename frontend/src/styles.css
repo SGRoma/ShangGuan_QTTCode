@@ -747,6 +747,34 @@ label span {
   margin-top: 12px;
 }
 
+.data-result-visual {
+  margin-top: 12px;
+}
+
+.inner-panel {
+  box-shadow: none;
+}
+
+.mini-action {
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.sample-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sample-edit-grid textarea {
+  min-height: 220px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+}
+
 .learning-box {
   display: grid;
   grid-template-columns: 28px 1fr;
@@ -784,7 +812,7 @@ label span {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { position: relative; height: auto; }
   nav { grid-template-columns: repeat(3, 1fr); }
-  .metric-grid, .metric-grid.compact, .two-column, .workbench, .card-grid, .operation-grid, .form-grid, .three-column, .wide-left, .module-grid, .agent-layout, .agent-page .metric-grid.compact, .agent-output-grid, .process-strip, .run-bar, .result-grid { grid-template-columns: 1fr; }
+  .metric-grid, .metric-grid.compact, .two-column, .workbench, .card-grid, .operation-grid, .form-grid, .three-column, .wide-left, .module-grid, .agent-layout, .agent-page .metric-grid.compact, .agent-output-grid, .process-strip, .run-bar, .result-grid, .sample-edit-grid { grid-template-columns: 1fr; }
   .inline-input { grid-template-columns: 1fr; }
   .monitor-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

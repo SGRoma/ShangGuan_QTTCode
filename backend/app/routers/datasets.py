@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import DatasetVersion, TrainingSample
-from ..schemas import DatasetCreate, SampleReviewRequest, TrainingSampleCreate
+from ..schemas import DatasetCreate, SampleReviewRequest, TrainingSampleCreate, TrainingSampleUpdate
 from ..serializers import model_to_dict
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
@@ -50,6 +50,26 @@ def add_sample(dataset_id: int, payload: TrainingSampleCreate, db: Session = Dep
     db.commit()
     db.refresh(row)
     return model_to_dict(row)
+
+
+@router.patch("/{dataset_id}/samples/{sample_id}")
+def update_sample(dataset_id: int, sample_id: int, payload: TrainingSampleUpdate, db: Session = Depends(get_db)):
+    dataset = db.get(DatasetVersion, dataset_id)
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset version not found.")
+    row = db.get(TrainingSample, sample_id)
+    if not row or row.dataset_version_id != dataset_id:
+        raise HTTPException(status_code=404, detail="Training sample not found.")
+    changes = payload.model_dump(exclude_unset=True)
+    for field in ("sample_type", "features_json", "label_json", "sample_weight", "quality_score", "status", "can_train"):
+        if field in changes:
+            setattr(row, field, changes[field])
+    row.reviewed_at = datetime.utcnow()
+    dataset.approved_sample_count = sum(1 for item in dataset.samples if item.status == "approved" and item.can_train)
+    dataset.excluded_sample_count = sum(1 for item in dataset.samples if item.status in {"rejected", "negative_sample", "invalid", "deprecated"})
+    db.commit()
+    db.refresh(row)
+    return {"sample": model_to_dict(row), "dataset": model_to_dict(dataset)}
 
 
 @router.post("/{dataset_id}/generate-from-strategy")

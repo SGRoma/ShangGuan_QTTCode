@@ -102,6 +102,16 @@ class TrainingSampleCreate(BaseModel):
     can_train: bool = False
 
 
+class TrainingSampleUpdate(BaseModel):
+    sample_type: str | None = None
+    features_json: dict[str, Any] | None = None
+    label_json: dict[str, Any] | None = None
+    sample_weight: float | None = None
+    quality_score: float | None = None
+    status: Literal["candidate", "approved", "rejected", "negative_sample", "invalid", "deprecated"] | None = None
+    can_train: bool | None = None
+
+
 class SampleReviewRequest(BaseModel):
     sample_ids: list[int]
     status: Literal["approved", "rejected", "negative_sample", "invalid", "deprecated"]
@@ -165,6 +175,15 @@ class DataModelCreate(BaseModel):
     })
     schedule_config_json: dict[str, Any] = Field(default_factory=lambda: {"mode": "manual_or_daily", "cron": "after_market_close"})
     status: str = "active"
+
+
+class DataModelUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    feature_version: str | None = None
+    pipeline_config_json: dict[str, Any] | None = None
+    schedule_config_json: dict[str, Any] | None = None
+    status: str | None = None
 
 
 class DataModelRunRequest(BaseModel):

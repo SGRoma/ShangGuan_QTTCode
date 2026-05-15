@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import DataModelDefinition
-from ..schemas import DataModelBatchRunRequest, DataModelCreate, DataModelRunRequest
+from ..schemas import DataModelBatchRunRequest, DataModelCreate, DataModelRunRequest, DataModelUpdate
 from ..serializers import model_to_dict
+from ..quant.indicators import compute_indicators, score_factors
+from ..services.market_data import daily_frame
 from ..services.model_runtime import ensure_default_models, run_data_model
 
 router = APIRouter(prefix="/data-models", tags=["data-models"])
@@ -26,6 +28,21 @@ def list_data_models(db: Session = Depends(get_db)):
 def create_data_model(payload: DataModelCreate, db: Session = Depends(get_db)):
     row = DataModelDefinition(**payload.model_dump())
     db.add(row)
+    db.commit()
+    db.refresh(row)
+    return model_to_dict(row)
+
+
+@router.patch("/{model_id}")
+def update_data_model(model_id: int, payload: DataModelUpdate, db: Session = Depends(get_db)):
+    row = db.get(DataModelDefinition, model_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Data model not found.")
+    changes = payload.model_dump(exclude_unset=True)
+    for field in ("name", "description", "feature_version", "pipeline_config_json", "schedule_config_json", "status"):
+        if field in changes:
+            setattr(row, field, changes[field])
+    row.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(row)
     return model_to_dict(row)
@@ -64,9 +81,34 @@ def run_models(payload: DataModelBatchRunRequest, db: Session = Depends(get_db))
         if not model:
             raise HTTPException(status_code=404, detail=f"Data model {model_id} not found.")
         result = run_data_model(db, payload.stock_code, model, payload.start, payload.generate_dataset)
+        result["preview_series"] = _preview_series(db, payload.stock_code)
         model.last_run_at = datetime.utcnow()
         model.last_run_summary_json = result
         db.commit()
         db.refresh(model)
         results.append({"model": model_to_dict(model), "result": result})
     return {"stock_code": payload.stock_code, "results": results, "run_count": len(results)}
+
+
+def _preview_series(db: Session, stock_code: str) -> list[dict]:
+    frame = daily_frame(db, stock_code)
+    if frame.empty:
+        return []
+    factors = compute_indicators(frame)
+    scored = factors.apply(score_factors, axis=1, result_type="expand")
+    merged = factors.join(scored).tail(120)
+    rows = []
+    for row in merged.to_dict(orient="records"):
+        rows.append(
+            {
+                "trade_date": row["trade_date"].isoformat() if hasattr(row["trade_date"], "isoformat") else str(row["trade_date"]),
+                "close": round(float(row.get("close") or 0), 4),
+                "ma20": round(float(row.get("ma20") or 0), 4),
+                "ma60": round(float(row.get("ma60") or 0), 4),
+                "score": round(float(row.get("score") or 0), 2),
+                "volume_ratio": round(float(row.get("volume_ratio") or 0), 4),
+                "risk_level": row.get("risk_level"),
+                "signal": row.get("signal"),
+            }
+        )
+    return rows
