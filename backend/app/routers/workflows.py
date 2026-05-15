@@ -69,6 +69,7 @@ def research_run(payload: ResearchRunRequest, db: Session = Depends(get_db)):
         idea_text=payload.idea,
         agent_output=agent_output.get("fallback") or agent_output,
         min_score=payload.min_score,
+        idea_id=payload.strategy_idea_id,
     )
     backtest = _run_and_store_backtest(db, strategy, stock_code, payload.initial_cash, payload.max_position_per_stock)
     explanation = agent_service.run(
@@ -257,21 +258,30 @@ def _analysis_context(db: Session, stock_code: str) -> dict[str, Any]:
     }
 
 
-def _create_strategy_from_idea(db: Session, title: str, idea_text: str, agent_output: dict[str, Any], min_score: float) -> StrategyVersion:
-    idea = StrategyIdea(
-        title=title,
-        content=idea_text,
-        source="agent_workflow",
-        status="approved",
-        review_status="reviewed",
-        can_train=True,
-        can_trade=False,
-        risk_level=agent_output.get("risk_level", "medium"),
-        created_by="workflow",
-        remark="由研究闭环生成，禁止直接用于真实下单。",
-    )
-    db.add(idea)
-    db.flush()
+def _create_strategy_from_idea(db: Session, title: str, idea_text: str, agent_output: dict[str, Any], min_score: float, idea_id: int | None = None) -> StrategyVersion:
+    idea = db.get(StrategyIdea, idea_id) if idea_id else None
+    if idea:
+        idea.title = idea.title or title
+        idea.content = idea_text
+        idea.status = "pending_review" if idea.status == "candidate" else idea.status
+        idea.risk_level = agent_output.get("risk_level", idea.risk_level or "medium")
+        idea.remark = "已由研究闭环生成策略版本，仍需人工审核训练资格。"
+        idea.updated_at = datetime.utcnow()
+    else:
+        idea = StrategyIdea(
+            title=title,
+            content=idea_text,
+            source="agent_workflow",
+            status="pending_review",
+            review_status="pending",
+            can_train=False,
+            can_trade=False,
+            risk_level=agent_output.get("risk_level", "medium"),
+            created_by="workflow",
+            remark="由研究闭环生成，禁止直接用于真实下单。",
+        )
+        db.add(idea)
+        db.flush()
     version_count = db.scalar(select(func.count()).select_from(StrategyVersion).where(StrategyVersion.strategy_idea_id == idea.id)) or 0
     version = StrategyVersion(
         strategy_idea_id=idea.id,

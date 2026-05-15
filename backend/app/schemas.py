@@ -22,6 +22,14 @@ class StrategyIdeaCreate(BaseModel):
     created_by: str | None = None
 
 
+class StrategyIdeaUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    status: str | None = None
+    risk_level: str | None = None
+    remark: str | None = None
+
+
 class StrategyReviewRequest(BaseModel):
     status: Literal["pending_review", "approved", "rejected", "negative_sample", "deprecated", "invalid"]
     can_train: bool = False
@@ -120,6 +128,7 @@ class WorkflowBootstrapRequest(BaseModel):
 class ResearchRunRequest(BaseModel):
     stock_code: str = "600418"
     stock_name: str | None = None
+    strategy_idea_id: int | None = None
     idea: str = "以趋势、动量、成交量和回撤控制为核心，构建可解释的动态多因子策略。"
     initial_cash: float = 1_000_000
     min_score: float = 70

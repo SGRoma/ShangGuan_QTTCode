@@ -11,8 +11,8 @@ const nav = [
   {
     title: "智能体",
     items: [
-      { key: "agents", label: "智能体工作台", icon: Bot },
-      { key: "strategies", label: "策略生成", icon: FlaskConical }
+      { key: "agents", label: "智能体监测台", icon: Bot },
+      { key: "strategies", label: "策略实验室", icon: FlaskConical }
     ]
   },
   {

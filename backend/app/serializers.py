@@ -1,7 +1,11 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 import math
 from typing import Any
+from zoneinfo import ZoneInfo
+
+
+APP_TIMEZONE = ZoneInfo("Asia/Shanghai")
 
 
 def jsonable(value: Any) -> Any:
@@ -10,7 +14,11 @@ def jsonable(value: Any) -> Any:
         return number if math.isfinite(number) else None
     if isinstance(value, float):
         return value if math.isfinite(value) else None
-    if isinstance(value, (datetime, date)):
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=UTC)
+        return value.astimezone(APP_TIMEZONE).isoformat(timespec="seconds")
+    if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, list):
         return [jsonable(item) for item in value]

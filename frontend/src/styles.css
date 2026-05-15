@@ -312,6 +312,9 @@ th { background: #f7f9fb; color: var(--muted); font-size: 12px; }
 }
 
 .guardrail-list span, .log-list span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 9px 10px;
   border-radius: 6px;
   background: var(--blue-soft);
@@ -328,6 +331,11 @@ th { background: #f7f9fb; color: var(--muted); font-size: 12px; }
   background: var(--panel-soft);
   color: var(--text);
   text-align: left;
+}
+
+.list-button.active {
+  border-color: var(--blue);
+  background: var(--blue-soft);
 }
 
 .review-card span {
@@ -505,6 +513,67 @@ label span {
   background: var(--panel-soft);
   color: var(--text);
   font-size: 13px;
+}
+
+.agent-list {
+  display: grid;
+  gap: 8px;
+}
+
+.agent-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 58px;
+  border-color: var(--line);
+  background: var(--panel-soft);
+  color: var(--text);
+  text-align: left;
+}
+
+.agent-row.active {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.agent-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.agent-row small,
+.agent-row em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.agent-detail {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.learning-box {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 220px;
+}
+
+.row-actions button {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
 .error-banner {

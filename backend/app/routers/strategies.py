@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import StrategyIdea, StrategyVersion
-from ..schemas import StrategyIdeaCreate, StrategyReviewRequest, StrategyVersionCreate
+from ..schemas import StrategyIdeaCreate, StrategyIdeaUpdate, StrategyReviewRequest, StrategyVersionCreate
 from ..serializers import model_to_dict
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
@@ -54,6 +54,21 @@ def review_idea(idea_id: int, payload: StrategyReviewRequest, db: Session = Depe
     return model_to_dict(row)
 
 
+@router.patch("/ideas/{idea_id}")
+def update_idea(idea_id: int, payload: StrategyIdeaUpdate, db: Session = Depends(get_db)):
+    row = db.get(StrategyIdea, idea_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Strategy idea not found.")
+    changes = payload.model_dump(exclude_unset=True)
+    for field in ("title", "content", "status", "risk_level", "remark"):
+        if field in changes:
+            setattr(row, field, changes[field])
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return model_to_dict(row)
+
+
 @router.post("/versions")
 def create_version(payload: StrategyVersionCreate, db: Session = Depends(get_db)):
     if payload.strategy_idea_id and not db.get(StrategyIdea, payload.strategy_idea_id):
@@ -82,4 +97,3 @@ def deprecate_version(version_id: int, db: Session = Depends(get_db)):
     row.updated_at = datetime.utcnow()
     db.commit()
     return model_to_dict(row)
-

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     bltcy_api_key: str | None = None
     bltcy_wire_api: str = "responses"
     bltcy_model: str = "gpt-5"
+    bltcy_timeout_seconds: int = 8
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

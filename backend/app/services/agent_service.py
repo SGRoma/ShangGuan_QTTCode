@@ -65,7 +65,7 @@ class AgentService:
                     "input": [prompt],
                     "text": {"format": {"type": "json_object"}},
                 },
-                timeout=30,
+                timeout=settings.bltcy_timeout_seconds,
             )
             response.raise_for_status()
             payload = response.json()
