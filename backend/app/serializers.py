@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 import math
 from typing import Any
@@ -16,7 +16,7 @@ def jsonable(value: Any) -> Any:
         return value if math.isfinite(value) else None
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            value = value.replace(tzinfo=UTC)
+            value = value.replace(tzinfo=timezone.utc)
         return value.astimezone(APP_TIMEZONE).isoformat(timespec="seconds")
     if isinstance(value, date):
         return value.isoformat()
