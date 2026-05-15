@@ -1,0 +1,2 @@
+"""Quant calculation package."""
+
